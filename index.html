@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>진행 현황 카드</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 16px;
+      background: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      color: #191919;
+    }
+
+    .widget {
+      width: 100%;
+      max-width: 420px;
+      border: 1px solid #e7e7e7;
+      border-radius: 18px;
+      padding: 18px;
+      background: #ffffff;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.06);
+    }
+
+    .top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .title {
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.4;
+      margin: 0;
+    }
+
+    .subtitle {
+      margin-top: 4px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .badge {
+      flex-shrink: 0;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: #f3f4f6;
+      color: #111827;
+      white-space: nowrap;
+    }
+
+    .progress-wrap {
+      margin: 12px 0 16px;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 8px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 10px;
+      background: #f1f5f9;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #111827 0%, #4b5563 100%);
+      transition: width 0.4s ease;
+    }
+
+    .current-box {
+      border: 1px solid #ececec;
+      border-radius: 14px;
+      padding: 14px;
+      background: #fafafa;
+      margin-bottom: 14px;
+    }
+
+    .current-label {
+      font-size: 11px;
+      color: #6b7280;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .current-step {
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.35;
+      margin-bottom: 4px;
+    }
+
+    .current-date {
+      font-size: 13px;
+      color: #4b5563;
+    }
+
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 28px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 8px;
+      border-radius: 12px;
+    }
+
+    .timeline-item.current {
+      background: #f5f7fb;
+      border: 1px solid #e5e7eb;
+    }
+
+    .timeline-item.done {
+      opacity: 0.8;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin: 0 auto;
+      background: #d1d5db;
+      position: relative;
+    }
+
+    .timeline-item.done .dot {
+      background: #111827;
+    }
+
+    .timeline-item.current .dot {
+      background: #2563eb;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    }
+
+    .step-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #111827;
+      line-height: 1.4;
+    }
+
+    .step-date {
+      font-size: 12px;
+      color: #6b7280;
+      white-space: nowrap;
+    }
+
+    .footer {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px dashed #e5e7eb;
+      font-size: 12px;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="widget" id="widget"></div>
+
+  <script>
+    // =========================
+    // 여기만 수정하면 됨
+    // =========================
+    const projectData = {
+      title: "과제 진행 일정",
+      subtitle: "현재 단계와 전체 진행률",
+      currentStep: 3, // 현재 몇 번째 단계인지
+      steps: [
+        { name: "사업 공고 확인", date: "2026-03-05" },
+        { name: "신청서 제출", date: "2026-03-12" },
+        { name: "서류 검토", date: "2026-03-18" },
+        { name: "발표 평가", date: "2026-03-26" },
+        { name: "최종 선정", date: "2026-04-03" }
+      ]
+    };
+
+    function formatDate(dateStr) {
+      const d = new Date(dateStr);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}.${m}.${day}`;
+    }
+
+    function renderWidget(data) {
+      const total = data.steps.length;
+      const current = Math.min(Math.max(data.currentStep, 1), total);
+      const progress = Math.round((current / total) * 100);
+      const currentItem = data.steps[current - 1];
+
+      const timelineHtml = data.steps.map((step, idx) => {
+        const stepNo = idx + 1;
+        const statusClass =
+          stepNo < current ? "done" :
+          stepNo === current ? "current" : "";
+
+        return `
+          <div class="timeline-item ${statusClass}">
+            <div class="dot"></div>
+            <div class="step-name">${stepNo}. ${step.name}</div>
+            <div class="step-date">${formatDate(step.date)}</div>
+          </div>
+        `;
+      }).join("");
+
+      document.getElementById("widget").innerHTML = `
+        <div class="top">
+          <div>
+            <h1 class="title">${data.title}</h1>
+            <div class="subtitle">${data.subtitle}</div>
+          </div>
+          <div class="badge">${current} / ${total} 단계</div>
+        </div>
+
+        <div class="progress-wrap">
+          <div class="progress-label">
+            <span>전체 진행률</span>
+            <span>${progress}%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:${progress}%"></div>
+          </div>
+        </div>
+
+        <div class="current-box">
+          <div class="current-label">Current Stage</div>
+          <div class="current-step">${current}. ${currentItem.name}</div>
+          <div class="current-date">일정: ${formatDate(currentItem.date)}</div>
+        </div>
+
+        <div class="timeline">
+          ${timelineHtml}
+        </div>
+
+        <div class="footer">
+          총 ${total}단계 일정 중 현재 ${current}단계 진행 중
+        </div>
+      `;
+    }
+
+    renderWidget(projectData);
+  </script>
+</body>
+</html>
